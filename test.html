@@ -1,0 +1,67 @@
+<body></body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+  var camera, scene, renderer;
+  var geometry, material, mesh1, mesh2;
+  var mouseX = 0, prevMouseX = 0;
+  var windowHalfX = window.innerWidth / 2;
+  var pointLight;
+
+  init();
+  animate();
+
+  document.addEventListener('mousemove', onDocumentMouseMove, false);
+
+  function init() {
+    scene = new THREE.Scene();
+    var aspect = window.innerWidth / window.innerHeight;
+    camera = new THREE.PerspectiveCamera(75, aspect, 1, 1000);
+    camera.position.z = 500;
+
+    // Erstes Mesh
+    geometry = new THREE.IcosahedronGeometry(100, 1);
+    material = new THREE.MeshPhongMaterial({ color: 0xff0000, wireframe: true });
+    mesh1 = new THREE.Mesh(geometry, material);
+    mesh1.position.x = -200;
+    scene.add(mesh1);
+
+    // Zweites Mesh
+    geometry = new THREE.IcosahedronGeometry(100, 1);
+    material = new THREE.MeshPhongMaterial({ color: 0x0000ff, wireframe: true });
+    mesh2 = new THREE.Mesh(geometry, material);
+    mesh2.position.x = 200;
+    scene.add(mesh2);
+
+    // Lichtquelle
+    pointLight = new THREE.PointLight(0xffffff, 1, 1000);
+    pointLight.position.set(0, 0, 500);
+    scene.add(pointLight);
+
+    renderer = new THREE.WebGLRenderer();
+    renderer.setClearColor(0xffffff);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+  }
+
+  function onDocumentMouseMove(event) {
+    prevMouseX = mouseX;
+    mouseX = (event.clientX - windowHalfX) / 2;
+  }
+
+  function animate() {
+    requestAnimationFrame(animate);
+
+    // Entscheidet, in welche Richtung sich jedes Objekt dreht
+    if (mouseX > prevMouseX) {
+      // Maus bewegt sich nach rechts
+      mesh1.rotation.y += 0.01;
+      mesh2.rotation.y -= 0.01;
+    } else if (mouseX < prevMouseX) {
+      // Maus bewegt sich nach links
+      mesh1.rotation.y -= 0.01;
+      mesh2.rotation.y += 0.01;
+    }
+
+    renderer.render(scene, camera);
+  }
+</script>
