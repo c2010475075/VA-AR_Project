@@ -1,69 +1,155 @@
-<body></body>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<!--/Das Projekt hat zwei interaktive Meshes und einen Sternenhintergrund. Bei Mausinteraktion wird die Rotation von MEshen geändert
+Außerdem wird auch die Hintergrundfarbei basierend auf der Position der Maus über die MEshes geändert. Und die Szene hat auch ein GUI wo man
+Lichtintensität anpassen kann-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Erweitertes Three.js Beispiel</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- dat.GUI Bibliothek für die GUI -->
+    <script src="https://cdn.jsdelivr.net/npm/dat.gui/build/dat.gui.min.js"></script>
+</head>
+<body>
 <script>
-  var camera, scene, renderer;
-  var geometry, material, mesh1, mesh2;
-  var mouseX = 0, mouseY = 0, prevMouseX = 0, prevMouseY = 0;
-  var windowHalfX = window.innerWidth / 2;
-  var windowHalfY = window.innerHeight / 2;
-  var pointLight;
+    // Definition der grundlegenden Variablen für die Szene, Kamera und Renderer
+    var camera, scene, renderer;
+    var geometry, material, mesh1, mesh2;
+    var mouseX = 0, mouseY = 0, prevMouseX = 0, prevMouseY = 0;
+    var windowHalfX = window.innerWidth / 2;
+    var windowHalfY = window.innerHeight / 2;
+    var pointLight, ambientLight;
+    var stars; // Für das Sternenfeld
+    var raycaster = new THREE.Raycaster(); // Zum Erkennen der Mausposition
+    var mouse = new THREE.Vector2(); // Mauskoordinaten
+    var gui; // Für die GUI-Steuerung
+    // Initialisierungsfunktion der Szene
+    init();
+    // Animationsfunktion
+    animate();
+    // Event-Listener für das Browser-Fenster-Resize
+    window.addEventListener('resize', onWindowResize, false);
 
-  init();
-  animate();
+    function init() {
+        scene = new THREE.Scene();
 
-  document.addEventListener('mousemove', onDocumentMouseMove, false);
+        // Kameraeinstellungen
+        var aspect = window.innerWidth / window.innerHeight;
+        camera = new THREE.PerspectiveCamera(75, aspect, 1, 1000);
+        camera.position.z = 500;
 
-  function init() {
-    scene = new THREE.Scene();
-    var aspect = window.innerWidth / window.innerHeight;
-    camera = new THREE.PerspectiveCamera(75, aspect, 1, 1000);
-    camera.position.z = 500;
+        // Erstellung des ersten Meshs
+        geometry = new THREE.IcosahedronGeometry(100, 1);
+        material = new THREE.MeshPhongMaterial({ color: 0xff0000, wireframe: true });
+        mesh1 = new THREE.Mesh(geometry, material);
+        mesh1.position.x = -200;
+        scene.add(mesh1);
 
-    // Erstes Mesh
-    geometry = new THREE.IcosahedronGeometry(100, 1);
-    material = new THREE.MeshPhongMaterial({ color: 0xff0000, wireframe: true });
-    mesh1 = new THREE.Mesh(geometry, material);
-    mesh1.position.x = -200;
-    scene.add(mesh1);
+        // Erstellung des zweiten Meshs
+        geometry = new THREE.IcosahedronGeometry(100, 1);
+        material = new THREE.MeshPhongMaterial({ color: 0x0000ff, wireframe: true });
+        mesh2 = new THREE.Mesh(geometry, material);
+        mesh2.position.x = 200;
+        scene.add(mesh2);
 
-    // Zweites Mesh
-    geometry = new THREE.IcosahedronGeometry(100, 1);
-    material = new THREE.MeshPhongMaterial({ color: 0x0000ff, wireframe: true });
-    mesh2 = new THREE.Mesh(geometry, material);
-    mesh2.position.x = 200;
-    scene.add(mesh2);
+        // Lichtquellen
+        pointLight = new THREE.PointLight(0xffffff, 1, 1000);
+        pointLight.position.set(0, 0, 500);
+        scene.add(pointLight);
 
-    // Lichtquelle
-    pointLight = new THREE.PointLight(0xffffff, 1, 1000);
-    pointLight.position.set(0, 0, 500);
-    scene.add(pointLight);
+        ambientLight = new THREE.AmbientLight(0x404040); // Weiches Umgebungslicht
+        scene.add(ambientLight);
 
-    renderer = new THREE.WebGLRenderer();
-    renderer.setClearColor(0xffffff);
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    document.body.appendChild(renderer.domElement);
-  }
+        // Renderer-Einstellungen
+        renderer = new THREE.WebGLRenderer();
+        renderer.setClearColor(0xadd8e6); // Hintergrundfarbe
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
 
-  function onDocumentMouseMove(event) {
-    prevMouseX = mouseX;
-    prevMouseY = mouseY;
-    mouseX = (event.clientX - windowHalfX) / 2;
-    mouseY = (event.clientY - windowHalfY) / 2;
-  }
+        // GUI-Einstellungen
+        gui = new dat.GUI();
+        var lightFolder = gui.addFolder('Licht');
+        lightFolder.add(pointLight, 'intensity', 0, 2, 0.01);
+        lightFolder.addColor(pointLight, 'color');
 
-  function animate() {
-    requestAnimationFrame(animate);
+        // Event-Listener für Mausbewegungen
+        document.addEventListener('mousemove', onDocumentMouseMove, false);
+        // Initialisierung der Sterne
+        initStars();
+    }
 
-    var deltaX = mouseX - prevMouseX;
-    var deltaY = mouseY - prevMouseY;
+    // Erstellung des Sternenfelds
+    function initStars() {
+        var particles = 2000;
+        var geometry = new THREE.BufferGeometry();
+        var vertices = [];
+        // Erstellung der einzelnen Sterne
+        for (var i = 0; i < particles; i++) {
+            vertices.push(THREE.MathUtils.randFloatSpread(2000));
+            vertices.push(THREE.MathUtils.randFloatSpread(2000));
+            vertices.push(THREE.MathUtils.randFloatSpread(2000));
+        }
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+        var material = new THREE.PointsMaterial({ color: 0x888888, size: 1.5 });
+        stars = new THREE.Points(geometry, material);
+        scene.add(stars);
+    }
 
-    // Rotation basierend auf der Richtung der Mausbewegung
-    mesh1.rotation.y += deltaX * 0.01;
-    mesh1.rotation.x += deltaY * 0.01;
+    // Fenstergrößen-Anpassungsfunktion
+    function onWindowResize() {
+        windowHalfX = window.innerWidth / 2;
+        windowHalfY = window.innerHeight / 2;
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
 
-    mesh2.rotation.y -= deltaX * 0.01;
-    mesh2.rotation.x -= deltaY * 0.01;
+    var hoveredObject = null;
+    // Funktion zur Behandlung der Mausbewegung
+    function onDocumentMouseMove(event) {
+        prevMouseX = mouseX;
+        prevMouseY = mouseY;
+        mouseX = (event.clientX - windowHalfX) / 2;
+        mouseY = (event.clientY - windowHalfY) / 2;
 
-    renderer.render(scene, camera);
-  }
+        // Aktualisierung der Mausposition für den Raycaster
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+        // Raycaster-Logik
+        raycaster.setFromCamera(mouse, camera);
+        var intersects = raycaster.intersectObjects([mesh1, mesh2]);
+
+        if (intersects.length > 0) {
+            if (intersects[0].object === mesh1) {
+                // Ändern Sie die Hintergrundfarbe für Mesh1
+                renderer.setClearColor(0xFF8080);
+            } else if (intersects[0].object === mesh2) {
+                // Ändern Sie die Hintergrundfarbe für Mesh2
+                renderer.setClearColor(0x7D7DFF);
+            }
+        } else {
+            // Setzen Sie die Hintergrundfarbe zurück
+            renderer.setClearColor(0xadd8e6);
+        }
+    }
+
+    // Animationsfunktion
+    function animate() {
+        requestAnimationFrame(animate);
+        // Rotation der Meshes basierend auf der Mausbewegung
+        mesh1.rotation.y += (mouseX - prevMouseX) * 0.01;
+        mesh1.rotation.x += (mouseY - prevMouseY) * 0.01;
+        mesh2.rotation.y -= (mouseX - prevMouseX) * 0.01;
+        mesh2.rotation.x -= (mouseY - prevMouseY) * 0.01;
+        // Animation der Sterne
+        stars.rotation.x += 0.0005;
+        stars.rotation.y += 0.0005;
+        // Rendern der Szene
+        renderer.render(scene, camera);
+    }
 </script>
+</body>
+</html>
