@@ -3,8 +3,9 @@
 <script>
   var camera, scene, renderer;
   var geometry, material, mesh1, mesh2;
-  var mouseX = 0, prevMouseX = 0;
+  var mouseX = 0, mouseY = 0, prevMouseX = 0, prevMouseY = 0;
   var windowHalfX = window.innerWidth / 2;
+  var windowHalfY = window.innerHeight / 2;
   var pointLight;
 
   init();
@@ -45,22 +46,23 @@
 
   function onDocumentMouseMove(event) {
     prevMouseX = mouseX;
+    prevMouseY = mouseY;
     mouseX = (event.clientX - windowHalfX) / 2;
+    mouseY = (event.clientY - windowHalfY) / 2;
   }
 
   function animate() {
     requestAnimationFrame(animate);
 
-    // Entscheidet, in welche Richtung sich jedes Objekt dreht
-    if (mouseX > prevMouseX) {
-      // Maus bewegt sich nach rechts
-      mesh1.rotation.y += 0.01;
-      mesh2.rotation.y -= 0.01;
-    } else if (mouseX < prevMouseX) {
-      // Maus bewegt sich nach links
-      mesh1.rotation.y -= 0.01;
-      mesh2.rotation.y += 0.01;
-    }
+    var deltaX = mouseX - prevMouseX;
+    var deltaY = mouseY - prevMouseY;
+
+    // Rotation basierend auf der Richtung der Mausbewegung
+    mesh1.rotation.y += deltaX * 0.01;
+    mesh1.rotation.x += deltaY * 0.01;
+
+    mesh2.rotation.y -= deltaX * 0.01;
+    mesh2.rotation.x -= deltaY * 0.01;
 
     renderer.render(scene, camera);
   }
